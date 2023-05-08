@@ -1,0 +1,47 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: install updates (Debian)
+    tags: always
+    apt:
+      upgrade: dist
+      update_cache: yes
+    when: ansible_distribution == "Debian"
+
+- hosts: web_servers
+  become: true
+  tasks:
+
+  - name: install apache and php packages
+    tags: apache
+    apt:
+      name:
+        - "{{ apache_package }}"
+        - "{{ php_package }}"
+      state: latest
+
+
+- hosts: db_servers
+  become: true
+  tasks:
+
+  - name: install mariadb package (Debian)
+    tags: mariadb
+    apt:
+      name: mariadb-server
+      state: latest
+    when: ansible_distribution == "Debian"
+
+- hosts: file_servers
+  become: true
+  tasks:
+    - name: install samba package
+      tags: samba
+      package:
+        name:
+          - samba
+          - terminator
+        state: latest

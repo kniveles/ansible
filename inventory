@@ -1,3 +1,8 @@
+[web_servers]
 192.168.0.156 apache_package=apache2 php_package=libapache2-mod-php
+
+[db_servers]
 192.168.0.200 apache_package=apache2 php_package=libapache2-mod-php
+
+[file_servers]
 192.168.0.195 apache_package=apache2 php_package=libapache2-mod-php
