@@ -2,15 +2,32 @@
 
 - hosts: all
   become: true
-  tasks:
+  pre_tasks:
 
-  - name: install updates (Debian)
+  - name: update repo cache (CentOS)
+    tags: always
+    dnf:
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "CentOS"
+
+  - name: update repo cache (Ubuntu)
     tags: always
     apt:
-      upgrade: dist
       update_cache: yes
-    when: ansible_distribution == "Debian"
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
 
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: add ssh key for simone
+    tags: always
+    authorized_key:
+      user: simone
+      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGB7sbrqtAUQjDA595Pvi1vCmLyhplu+A6Xod59GyJ0x ansible"
 
 - hosts: workstations
   become: true
@@ -18,8 +35,7 @@
 
   - name: install unzip
     package:
-      name:
-        - unzip
+      name: unzip
 
   - name: install terraform
     unarchive:
@@ -30,20 +46,38 @@
       owner: root
       group: root
 
-
 - hosts: web_servers
   become: true
   tasks:
 
-  - name: install apache and php packages
-    tags: apache
-    package:
+  - name: install httpd package (CentOS)
+    tags: apache,centos,httpd
+    dnf:
       name:
-        - "{{ apache_package }}"
-        - "{{ php_package }}"
+        - httpd
+        - php
       state: latest
+    when: ansible_distribution == "CentOS"
 
-  - name: copy default html file for site
+  - name: start httpd (CentOS)
+    tags: apache,centos,httpd
+    service:
+      name: httpd
+      enabled: yes
+      state: started
+    when: ansible_distribution == "CentOS"
+
+
+  - name: install apache2 package (Ubuntu)
+    tags: apache,apache2,ubuntu
+    apt:
+      name:
+        - apache2
+        - libapache2-mod-php
+      state: latest
+    when: ansible_distribution == "Ubuntu"
+
+  - name: copy html file for site
     tags: apache,apache2,httpd
     copy:
       src: default_site.html
@@ -51,26 +85,33 @@
       owner: root
       group: root
       mode: 0644
+    when: ansible_distribution == "Ubuntu"
 
 - hosts: db_servers
   become: true
   tasks:
 
-  - name: install mariadb package (Debian)
-    tags: mariadb
+  - name: install mariadb server package (CentOS)
+    tags: centos,db,mariadb
+    dnf:
+      name: mariadb
+      state: latest
+    when: ansible_distribution == "CentOS"
+
+  - name: install mariadb server
+    tags: db,mariadb,ubuntu
     apt:
       name: mariadb-server
       state: latest
-    when: ansible_distribution == "Debian"
+    when: ansible_distribution == "Ubuntu"
 
 - hosts: file_servers
+  tags: samba
   become: true
   tasks:
-    - name: install samba package
-      tags: samba
-      package:
-        name:
-          - samba
-          - terminator
-        state: latest
 
+  - name: install samba package
+    tags: samba
+    package:
+      name: samba
+      state: latest
